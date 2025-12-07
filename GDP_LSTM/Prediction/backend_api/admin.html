@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人口经济分析与空间分析管理后台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .header-bg {
+            background-color: #0d6efd;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+        .content-card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .data-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .btn-group-nav .btn {
+            font-size: 1.1rem;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            border-bottom: 3px solid #0d6efd;
+        }
+        /* 预测输入表格样式 */
+        .predict-input-table input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            text-align: right;
+        }
+        .predict-input-table input:focus {
+            outline: 2px solid #86b7fe;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header-bg">
+        <div class="container">
+            <h1 class="text-center">人口经济分析与空间分析后端管理界面</h1>
+            <p class="text-center lead">API服务状态: **http://localhost:5000**</p>
+            <div class="text-center mt-3">
+                <a href="/api-test" class="btn btn-light btn-sm" target="_blank">
+                    🚀 API接口测试页面
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">📊 概览 & 基础数据</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="coupling-tab" data-bs-toggle="tab" data-bs-target="#coupling" type="button" role="tab">🔗 耦合协调度分析</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="spatial-tab" data-bs-toggle="tab" data-bs-target="#spatial" type="button" role="tab">🗺️ GDP空间分析</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="predict-tab" data-bs-toggle="tab" data-bs-target="#predict" type="button" role="tab">🔮 GDP 预测模型</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabsContent">
+
+            <!-- 1. 概览 & 基础数据 -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel" tabindex="0">
+                <div class="card content-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5>数据库表信息 (<span id="tableCount">0</span>个)</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>表名</th>
+                                    <th>基础API路径</th>
+                                    <th>单位</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableListBody">
+                                <tr><td colspan="4" class="text-center">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="dataModal" tabindex="-1" aria-labelledby="dataModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="dataModalLabel"></h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>单位: <strong id="dataModalUnit"></strong></p>
+                                <p>总记录数: <strong id="dataModalTotal"></strong></p>
+                                <div class="data-table-container">
+                                    <table class="table table-bordered table-sm" id="dataDetailTable">
+                                        </table>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 耦合协调度分析 -->
+            <div class="tab-pane fade" id="coupling" role="tabpanel" tabindex="0">
+                <div class="card content-card">
+                    <div class="card-header bg-success text-white">
+                        <h5>耦合协调度分析结果查询</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-center mb-3">
+                            <div class="col-auto">
+                                <label for="couplingYearSelect" class="col-form-label">选择年份:</label>
+                            </div>
+                            <div class="col-auto">
+                                <select class="form-select" id="couplingYearSelect">
+                                    </select>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-success" id="loadCouplingDataBtn">加载分析数据</button>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-info" id="loadCouplingTrendBtn">加载全部年份趋势数据</button>
+                            </div>
+                        </div>
+
+                        <div id="couplingResultArea">
+                            <h6 class="mt-4">📊 统计信息 (<span id="couplingStatsYear"></span>年)</h6>
+                            <pre id="couplingStats" class="bg-light p-3 rounded"></pre>
+
+                            <h6 class="mt-4">📜 地区排名列表</h6>
+                            <div class="data-table-container">
+                                <table class="table table-bordered table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>排名</th>
+                                            <th>地区</th>
+                                            <th>协调度 (D)</th>
+                                            <th>协调等级</th>
+                                            <th>发展类型</th>
+                                            <th>耦合度 (C)</th>
+                                            <th>综合指数 (T)</th>
+                                            <th>人口指数 (U_p)</th>
+                                            <th>GDP指数 (U_e)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="couplingRegionsBody">
+                                        <tr><td colspan="9" class="text-center">请选择年份并点击加载</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h6 class="mt-4">📈 趋势数据</h6>
+                            <div class="data-table-container" style="max-height: 200px;">
+                                <pre id="couplingTrendData" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. GDP空间分析 -->
+            <div class="tab-pane fade" id="spatial" role="tabpanel" tabindex="0">
+                <div class="card content-card">
+                    <div class="card-header bg-danger text-white">
+                        <h5>GDP空间分析 (Moran's I, LISA, Gi*)</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="alert alert-warning">
+                            **注意:** 空间分析数据需要手动触发生成。K=4近邻，排列检验次数 perm=99。
+                        </p>
+
+                        <div class="d-flex mb-3">
+                            <button class="btn btn-danger me-3" id="refreshSpatialDataBtn">🚀 刷新/生成空间分析数据 (POST /api/spatial/refresh)</button>
+                            <button class="btn btn-outline-danger" id="loadSpatialYearsBtn">🔄 加载可用年份</button>
+                        </div>
+                        
+                        <div class="row g-3 align-items-center mb-3">
+                            <div class="col-auto">
+                                <label for="spatialYearSelect" class="col-form-label">选择已分析年份:</label>
+                            </div>
+                            <div class="col-auto">
+                                <select class="form-select" id="spatialYearSelect">
+                                    </select>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-primary" id="loadSpatialStatsBtn">加载统计信息</button>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-primary" id="loadSpatialGeoJsonBtn">查看 GeoJSON 数据</button>
+                            </div>
+                        </div>
+
+                        <div id="spatialResultArea">
+                            <h6 class="mt-4">📊 统计信息 (<span id="spatialStatsYear"></span>年)</h6>
+                            <pre id="spatialStats" class="bg-light p-3 rounded"></pre>
+
+                            <h6 class="mt-4">🗺️ GeoJSON 数据预览</h6>
+                            <div class="data-table-container" style="max-height: 250px;">
+                                <pre id="spatialGeoJson" class="bg-dark text-white p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. GDP 预测模型 (New) -->
+            <div class="tab-pane fade" id="predict" role="tabpanel" tabindex="0">
+                <div class="card content-card">
+                    <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                        <h5>🔮 GDP 预测模型 (Seq2Seq LSTM)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label"><strong>选择省份</strong></label>
+                                <select class="form-select form-select-lg" id="predictProvinceSelect">
+                                    <!-- 省份列表将通过JS填充 -->
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button class="btn btn-primary btn-lg w-100" id="fetchAndDisplayChartBtn" style="background-color: #6f42c1; border-color: #6f42c1;">
+                                    📊 获取数据并生成图表
+                                </button>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button class="btn btn-success btn-lg w-100" id="exportDatabaseBtn">
+                                    💾 导出数据库
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 数据库数据展示区域 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">🗄️ 数据库预测数据</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <button class="btn btn-sm btn-outline-primary mb-2" id="loadDbPredictionsBtn">
+                                            刷新数据库预测数据
+                                        </button>
+                                        <div id="dbPredictionsArea" style="max-height: 300px; overflow-y: auto;">
+                                            <p class="text-muted">点击按钮加载数据库中的预测数据</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h6 class="mb-0">📊 数据库训练指标</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <button class="btn btn-sm btn-outline-warning mb-2" id="loadDbMetricsBtn">
+                                            刷新数据库训练指标
+                                        </button>
+                                        <div id="dbMetricsArea" style="max-height: 300px; overflow-y: auto;">
+                                            <p class="text-muted">点击按钮加载数据库中的训练指标</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 预测结果表格 -->
+                        <div id="predictionResultArea" style="display: none;">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">📈 GDP历史与预测数据</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="data-table-container" style="max-height: 500px;">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>年份</th>
+                                                    <th>GDP (亿)</th>
+                                                    <th>数据类型</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="predictionResultBody">
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 训练指标展示区域 -->
+                        <div id="metricsResultArea" style="display: none; margin-top: 20px;">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">📊 模型训练指标</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <h6>📋 训练信息</h6>
+                                            <div id="trainingInfo">
+                                                <!-- 训练基本信息将在这里显示 -->
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>⚙️ 超参数</h6>
+                                            <div id="hyperparamsInfo">
+                                                <!-- 超参数信息将在这里显示 -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <h6>📈 训练过程指标</h6>
+                                            <div class="data-table-container" style="max-height: 400px;">
+                                                <table class="table table-striped table-hover table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>轮次</th>
+                                                            <th>训练损失</th>
+                                                            <th>训练MAE</th>
+                                                            <th>训练MSE</th>
+                                                            <th>训练MAPE</th>
+                                                            <th>测试损失</th>
+                                                            <th>测试MAE</th>
+                                                            <th>测试MSE</th>
+                                                            <th>测试MAPE</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="metricsTableBody">
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api';
+
+        // 省份列表常量
+        const PROVINCES = [
+            "北京市", "天津市", "上海市", "重庆市", "内蒙古自治区", "广西壮族自治区",
+            "西藏自治区", "宁夏回族自治区", "新疆维吾尔自治区", "河北省", "山西省",
+            "辽宁省", "吉林省", "黑龙江省", "江苏省", "浙江省", "安徽省", "福建省",
+            "江西省", "山东省", "河南省", "湖北省", "湖南省", "广东省", "海南省",
+            "四川省", "贵州省", "云南省", "陕西省", "甘肃省", "青海省"
+        ];
+
+        // 辅助函数：显示通知
+        function showNotification(message, type = 'primary') {
+            alert(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // ===================================
+        // 1. 概览 & 基础数据功能
+        // ===================================
+        
+        async function fetchTables() {
+            try {
+                const response = await fetch(`${API_BASE}/tables`);
+                const data = await response.json();
+
+                if (data.code === 0 && data.data) {
+                    const tableListBody = document.getElementById('tableListBody');
+                    tableListBody.innerHTML = '';
+                    document.getElementById('tableCount').textContent = data.data.length;
+
+                    data.data.forEach(table => {
+                        const row = tableListBody.insertRow();
+                        row.insertCell().textContent = table.name;
+                        row.insertCell().textContent = table.api_base_path;
+                        row.insertCell().textContent = table.unit;
+                        const actionCell = row.insertCell();
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-sm btn-outline-primary';
+                        btn.textContent = '查看数据';
+                        btn.onclick = () => fetchTableData(table.name, table.unit);
+                        actionCell.appendChild(btn);
+                    });
+                } else {
+                    document.getElementById('tableListBody').innerHTML = '<tr><td colspan="4" class="text-center">加载表信息失败</td></tr>';
+                }
+            } catch (error) {
+                console.error('Fetch tables error:', error);
+                document.getElementById('tableListBody').innerHTML = `<tr><td colspan="4" class="text-center">网络错误: ${error.message}</td></tr>`;
+            }
+        }
+
+        async function fetchTableData(tableName, unit) {
+            try {
+                const response = await fetch(`${API_BASE}/${tableName}?page=1&size=50`);
+                const data = await response.json();
+
+                const modalLabel = document.getElementById('dataModalLabel');
+                const modalUnit = document.getElementById('dataModalUnit');
+                const modalTotal = document.getElementById('dataModalTotal');
+                const detailTable = document.getElementById('dataDetailTable');
+
+                modalLabel.textContent = `${tableName} - 前50条记录`;
+                modalUnit.textContent = unit || '无';
+                modalTotal.textContent = data.total || 'N/A';
+                detailTable.innerHTML = ''; // 清空表格
+
+                if (data.code === 0 && data.data.length > 0) {
+                    const columns = Object.keys(data.data[0]);
+                    
+                    const thead = detailTable.createTHead();
+                    const headerRow = thead.insertRow();
+                    columns.forEach(col => {
+                        const th = document.createElement('th');
+                        th.textContent = col;
+                        headerRow.appendChild(th);
+                    });
+
+                    const tbody = detailTable.createTBody();
+                    data.data.forEach(rowObj => {
+                        const row = tbody.insertRow();
+                        columns.forEach(col => {
+                            row.insertCell().textContent = rowObj[col];
+                        });
+                    });
+                } else {
+                    detailTable.innerHTML = '<tr><td>无数据或加载失败</td></tr>';
+                }
+
+                new bootstrap.Modal(document.getElementById('dataModal')).show();
+
+            } catch (error) {
+                console.error(`Fetch ${tableName} data error:`, error);
+                showNotification(`加载 ${tableName} 数据失败`, 'danger');
+            }
+        }
+
+
+        // ===================================
+        // 2. 耦合协调度分析功能
+        // ===================================
+
+        async function setupCouplingAnalysis() {
+            try {
+                const yearsResponse = await fetch(`${API_BASE}/years`);
+                const yearsData = await yearsResponse.json();
+                const select = document.getElementById('couplingYearSelect');
+                select.innerHTML = '';
+                
+                if (yearsData.success && yearsData.years) {
+                    yearsData.years.forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = year;
+                        select.appendChild(option);
+                    });
+                    if (yearsData.years.length > 0) {
+                        select.value = yearsData.years[yearsData.years.length - 1];
+                    }
+                } else {
+                    select.innerHTML = '<option value="">加载年份失败</option>';
+                }
+            } catch (error) {
+                console.error('Setup coupling analysis error:', error);
+            }
+
+            document.getElementById('loadCouplingDataBtn').onclick = loadCouplingData;
+            document.getElementById('loadCouplingTrendBtn').onclick = loadCouplingTrendData;
+        }
+        async function loadCouplingData() {
+            const year = document.getElementById('couplingYearSelect').value;
+            if (!year) return showNotification('请选择年份', 'warning');
+
+            document.getElementById('couplingStatsYear').textContent = year;
+            document.getElementById('couplingStats').textContent = '加载中...';
+            document.getElementById('couplingRegionsBody').innerHTML = '<tr><td colspan="9" class="text-center">加载中...</td></tr>';
+            
+            try {
+                // 加载统计信息和地区列表
+                const regionsResponse = await fetch(`${API_BASE}/regions?year=${year}`);
+                const regionsData = await regionsResponse.json();
+
+                const dataResponse = await fetch(`${API_BASE}/data?year=${year}`);
+                const dataData = await dataResponse.json();
+
+                // 填充统计信息
+                if (dataData.success) {
+                    document.getElementById('couplingStats').textContent = JSON.stringify(dataData.statistics, null, 2);
+                    showNotification(`${year}年耦合协调度统计信息加载成功`, 'success');
+                } else {
+                    document.getElementById('couplingStats').textContent = dataData.message || '加载失败';
+                }
+
+                // 填充地区排名
+                const regionsBody = document.getElementById('couplingRegionsBody');
+                regionsBody.innerHTML = '';
+                if (regionsData.success && regionsData.regions) {
+                    regionsData.regions.forEach((region, index) => {
+                        const row = regionsBody.insertRow();
+                        row.insertCell().textContent = index + 1;
+                        row.insertCell().textContent = region.name;
+                        row.insertCell().textContent = region.coordination_degree.toFixed(4);
+                        row.insertCell().textContent = region.coordination_level;
+                        row.insertCell().textContent = region.development_type;
+                        row.insertCell().textContent = region.coupling_degree.toFixed(4);
+                        row.insertCell().textContent = region.U_p.toFixed(4);
+                        row.insertCell().textContent = region.U_e.toFixed(4);
+                    });
+                } else {
+                    regionsBody.innerHTML = `<tr><td colspan="9" class="text-center">${regionsData.message || '地区列表加载失败'}</td></tr>`;
+                }
+
+            } catch (error) {
+                console.error('Load coupling data error:', error);
+                showNotification('加载耦合协调度数据时发生错误', 'danger');
+            }
+        }
+        async function loadCouplingTrendData() {
+            document.getElementById('couplingTrendData').textContent = '加载全部趋势数据中，请稍候...';
+            try {
+                const response = await fetch(`${API_BASE}/all_trend`);
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('couplingTrendData').textContent = JSON.stringify(data, (key, value) => {
+                        // 截断长数组，防止页面卡顿
+                        if (key === 'trend_data' && Array.isArray(value)) {
+                            return `[Array: ${value.length} records. Displaying first 5 only] ${JSON.stringify(value.slice(0, 5))}`;
+                        }
+                        return value;
+                    }, 2);
+                    showNotification(`成功加载 ${data.total_records} 条趋势数据`, 'success');
+                } else {
+                    document.getElementById('couplingTrendData').textContent = data.message || '加载失败';
+                }
+            } catch (error) {
+                console.error('Load trend data error:', error);
+                showNotification('加载趋势数据时发生错误', 'danger');
+                document.getElementById('couplingTrendData').textContent = `错误: ${error.message}`;
+            }
+        }
+        // ===================================
+        // 3. GDP空间分析功能
+        // ===================================
+
+        async function loadSpatialAvailableYears() {
+            try {
+                const response = await fetch(`${API_BASE}/spatial/available-years`);
+                const data = await response.json();
+                const select = document.getElementById('spatialYearSelect');
+                select.innerHTML = '';
+
+                if (data.status === 'success' && data.available_years.length > 0) {
+                    data.available_years.forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = year;
+                        select.appendChild(option);
+                    });
+                    select.value = data.available_years[data.available_years.length - 1];
+                    showNotification(`成功加载 ${data.total_count} 个已分析年份`, 'success');
+                } else {
+                    select.innerHTML = '<option value="">暂无已分析年份 (请刷新数据)</option>';
+                    showNotification(data.message || '加载可用年份失败', 'warning');
+                }
+            } catch (error) {
+                console.error('Load spatial years error:', error);
+                showNotification('加载空间分析可用年份时发生错误', 'danger');
+            }
+        }
+
+        async function refreshSpatialData() {
+            if (!confirm('确定要触发空间分析数据刷新吗？这可能需要几秒钟。')) return;
+            
+            showNotification('正在触发空间分析数据刷新...请等待。', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/spatial/refresh`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showNotification('空间分析数据刷新成功! 请点击 "加载可用年份" 查看结果。', 'success');
+                    loadSpatialAvailableYears(); // 刷新年份列表
+                } else {
+                    showNotification(`数据刷新失败: ${data.message}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Refresh spatial data error:', error);
+                showNotification('刷新空间分析数据时发生网络或服务器错误', 'danger');
+            }
+        }
+
+        async function loadSpatialStats() {
+            const year = document.getElementById('spatialYearSelect').value;
+            if (!year) return showNotification('请选择已分析年份', 'warning');
+
+            document.getElementById('spatialStatsYear').textContent = year;
+            document.getElementById('spatialStats').textContent = '加载中...';
+
+            try {
+                const response = await fetch(`${API_BASE}/spatial/stats/${year}`);
+                const data = await response.json();
+
+                if (!data.error) {
+                    document.getElementById('spatialStats').textContent = JSON.stringify(data, null, 2);
+                    showNotification(`${year}年空间统计信息加载成功`, 'success');
+                } else {
+                    document.getElementById('spatialStats').textContent = data.error;
+                    showNotification(`加载 ${year} 年统计信息失败`, 'warning');
+                }
+            } catch (error) {
+                console.error('Load spatial stats error:', error);
+                showNotification('加载空间统计信息时发生错误', 'danger');
+            }
+        }
+
+        async function loadSpatialGeoJson() {
+            const year = document.getElementById('spatialYearSelect').value;
+            if (!year) return showNotification('请选择已分析年份', 'warning');
+
+            document.getElementById('spatialGeoJson').textContent = '加载中...';
+
+            try {
+                const response = await fetch(`${API_BASE}/spatial/data/${year}`);
+                const data = await response.json();
+
+                // GeoJSON数据量可能很大，仅显示前几行
+                if (data.type === 'FeatureCollection') {
+                    const truncatedFeatures = data.features.slice(0, 2);
+                    const previewData = {
+                        type: data.type,
+                        features_count: data.features.length,
+                        preview_features: truncatedFeatures,
+                        // 移除geometry属性，防止打印过长
+                        message: `GeoJSON数据加载成功, 共 ${data.features.length} 个特征 (仅显示前2个的属性)`
+                    };
+                    document.getElementById('spatialGeoJson').textContent = JSON.stringify(previewData, (key, value) => {
+                        // 在预览中移除geometry以保持简洁
+                        return key === 'geometry' ? '[... Omitted Geometry Data ...]' : value;
+                    }, 2);
+                    showNotification(`${year}年 GeoJSON 数据预览成功`, 'success');
+                } else {
+                    document.getElementById('spatialGeoJson').textContent = JSON.stringify(data, null, 2);
+                    showNotification(`加载 ${year} 年 GeoJSON 数据失败`, 'warning');
+                }
+            } catch (error) {
+                console.error('Load spatial geojson error:', error);
+                showNotification('加载空间 GeoJSON 数据时发生错误', 'danger');
+            }
+        }
+
+
+        // ===================================
+        // 4. GDP 预测功能 (更新为列表)
+        // ===================================
+
+        function setupPredictUI() {
+            const provinceSelect = document.getElementById('predictProvinceSelect');
+            provinceSelect.innerHTML = '';
+            PROVINCES.forEach(province => {
+                const option = document.createElement('option');
+                option.value = province;
+                option.textContent = province;
+                provinceSelect.appendChild(option);
+            });
+            document.getElementById('fetchAndDisplayChartBtn').onclick = executePrediction;
+            document.getElementById('loadDbPredictionsBtn').onclick = loadDatabasePredictions;
+            document.getElementById('loadDbMetricsBtn').onclick = loadDatabaseMetrics;
+            document.getElementById('exportDatabaseBtn').onclick = exportDatabase;
+        }
+
+        async function executePrediction() {
+            const province = document.getElementById('predictProvinceSelect').value;
+            if (!province) {
+                showNotification('请选择一个省份', 'warning');
+                return;
+            }
+
+            const resultArea = document.getElementById('predictionResultArea');
+            const resultBody = document.getElementById('predictionResultBody');
+            const metricsArea = document.getElementById('metricsResultArea');
+            
+            resultArea.style.display = 'block';
+            metricsArea.style.display = 'block';
+            resultBody.innerHTML = '<tr><td colspan="3" class="text-center">加载中...</td></tr>';
+            
+            showNotification(`正在为 ${province} 获取历史、预测数据和训练指标...`, 'info');
+
+            try {
+                const [historicalRes, predictionRes, metricsRes] = await Promise.all([
+                    fetch(`${API_BASE}/gdp/historical/${province}`),
+                    fetch(`${API_BASE}/gdp/predict/${province}`),
+                    fetch(`${API_BASE}/gdp/metrics/${province}`)
+                ]);
+
+                const historicalPayload = await historicalRes.json();
+                const predictionPayload = await predictionRes.json();
+                const metricsPayload = await metricsRes.json();
+
+                if (!historicalPayload.success) throw new Error(`获取历史数据失败: ${historicalPayload.message}`);
+                if (!predictionPayload.success) throw new Error(`获取预测数据失败: ${predictionPayload.message}`);
+                
+                resultBody.innerHTML = ''; // 清空表格
+
+                // 填充历史数据
+                historicalPayload.data.forEach(item => {
+                    const row = resultBody.insertRow();
+                    row.innerHTML = `
+                        <td>${item.year}</td>
+                        <td>${item.gdp.toFixed(2)}</td>
+                        <td><span class="badge bg-secondary">历史数据</span></td>
+                    `;
+                });
+
+                // 填充预测数据
+                predictionPayload.data.forEach(item => {
+                    const row = resultBody.insertRow();
+                    row.classList.add('table-primary'); // 高亮预测行
+                    row.innerHTML = `
+                        <td><strong>${item.year}</strong></td>
+                        <td class="fw-bold">${item.gdp.toFixed(2)}</td>
+                        <td><span class="badge bg-primary">预测数据</span></td>
+                    `;
+                });
+
+                // 显示训练指标
+                displayTrainingMetrics(metricsPayload, province);
+
+                resultArea.scrollIntoView({ behavior: 'smooth' });
+                showNotification(`${province} 的GDP数据和训练指标已更新`, 'success');
+
+            } catch (error) {
+                console.error('Prediction execution error:', error);
+                showNotification(`执行预测时出错: ${error.message}`, 'danger');
+                resultBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">错误: ${error.message}</td></tr>`;
+            }
+        }
+
+        function displayTrainingMetrics(metricsPayload, province) {
+            const trainingInfo = document.getElementById('trainingInfo');
+            const hyperparamsInfo = document.getElementById('hyperparamsInfo');
+            const metricsTableBody = document.getElementById('metricsTableBody');
+
+            if (!metricsPayload.success) {
+                trainingInfo.innerHTML = `<div class="alert alert-warning">⚠️ 未找到 ${province} 的训练指标数据</div>`;
+                hyperparamsInfo.innerHTML = '';
+                metricsTableBody.innerHTML = '<tr><td colspan="9" class="text-center text-warning">无训练指标数据</td></tr>';
+                return;
+            }
+
+            const metrics = metricsPayload.metrics;
+            
+            // 显示训练基本信息
+            trainingInfo.innerHTML = `
+                <div class="small">
+                    <strong>省份:</strong> ${metrics.province}<br>
+                    <strong>训练时间:</strong> ${new Date(metrics.saved_at).toLocaleString()}<br>
+                    <strong>训练轮次:</strong> ${metrics.num_epochs}
+                </div>
+            `;
+
+            // 显示超参数
+            const hp = metrics.hyperparams;
+            hyperparamsInfo.innerHTML = `
+                <div class="small">
+                    <strong>输入特征数:</strong> ${hp.input_feature_size}<br>
+                    <strong>隐藏层大小:</strong> ${hp.hidden_size}<br>
+                    <strong>LSTM层数:</strong> ${hp.num_layers}<br>
+                    <strong>预测步数:</strong> ${hp.predict_steps}<br>
+                    <strong>窗口大小:</strong> ${hp.window_size}<br>
+                    <strong>批次大小:</strong> ${hp.batch_size}
+                </div>
+            `;
+
+            // 显示训练过程指标
+            metricsTableBody.innerHTML = '';
+            const metricsData = metrics.metrics;
+            const numEpochs = metricsData.train_loss.length;
+            
+            for (let i = 0; i < numEpochs; i++) {
+                const row = metricsTableBody.insertRow();
+                row.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${metricsData.train_loss[i].toFixed(4)}</td>
+                    <td>${metricsData.train_mae[i].toFixed(4)}</td>
+                    <td>${metricsData.train_mse[i].toFixed(4)}</td>
+                    <td>${metricsData.train_mape[i].toFixed(4)}</td>
+                    <td>${metricsData.test_loss[i].toFixed(4)}</td>
+                    <td>${metricsData.test_mae[i].toFixed(4)}</td>
+                    <td>${metricsData.test_mse[i].toFixed(4)}</td>
+                    <td>${metricsData.test_mape[i].toFixed(4)}</td>
+                `;
+                
+                // 高亮最后几轮（收敛情况）
+                if (i >= numEpochs - 5) {
+                    row.classList.add('table-success');
+                }
+            }
+        }
+
+        // ===================================
+        // 数据库数据管理功能
+        // ===================================
+
+        async function loadDatabasePredictions() {
+            const province = document.getElementById('predictProvinceSelect').value;
+            const dbPredictionsArea = document.getElementById('dbPredictionsArea');
+            
+            dbPredictionsArea.innerHTML = '<p class="text-info">加载中...</p>';
+            
+            try {
+                const url = province ? `${API_BASE}/gdp/db/predictions?province=${province}` : `${API_BASE}/gdp/db/predictions`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.data.length > 0) {
+                    let html = `<div class="small"><strong>共 ${data.total} 条记录</strong></div><table class="table table-sm table-striped">`;
+                    html += '<thead><tr><th>省份</th><th>年份</th><th>预测GDP(亿)</th><th>预测时间</th></tr></thead><tbody>';
+                    
+                    data.data.forEach(item => {
+                        const predictionDate = new Date(item.prediction_date).toLocaleString();
+                        html += `<tr>
+                            <td>${item.province}</td>
+                            <td>${item.year}</td>
+                            <td>${parseFloat(item.predicted_gdp).toFixed(2)}</td>
+                            <td class="small">${predictionDate}</td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table>';
+                    dbPredictionsArea.innerHTML = html;
+                } else {
+                    dbPredictionsArea.innerHTML = '<p class="text-warning">暂无预测数据</p>';
+                }
+                
+            } catch (error) {
+                console.error('Load database predictions error:', error);
+                dbPredictionsArea.innerHTML = '<p class="text-danger">加载失败</p>';
+            }
+        }
+
+        async function loadDatabaseMetrics() {
+            const province = document.getElementById('predictProvinceSelect').value;
+            const dbMetricsArea = document.getElementById('dbMetricsArea');
+            
+            dbMetricsArea.innerHTML = '<p class="text-info">加载中...</p>';
+            
+            try {
+                const url = province ? `${API_BASE}/gdp/db/metrics?province=${province}` : `${API_BASE}/gdp/db/metrics`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.data.length > 0) {
+                    let html = `<div class="small"><strong>共 ${data.total} 条记录</strong></div>`;
+                    
+                    data.data.forEach(item => {
+                        const trainingDate = new Date(item.training_date).toLocaleString();
+                        html += `<div class="border rounded p-2 mb-2">
+                            <strong>${item.province}</strong> (${item.num_epochs}轮)
+                            <div class="small text-muted">${trainingDate}</div>
+                            <div class="row small">
+                                <div class="col-6">
+                                    <div>训练MAE: ${item.final_train_mae.toFixed(4)}</div>
+                                    <div>训练MSE: ${item.final_train_mse.toFixed(4)}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div>测试MAE: ${item.final_test_mae.toFixed(4)}</div>
+                                    <div>测试MSE: ${item.final_test_mse.toFixed(4)}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    
+                    dbMetricsArea.innerHTML = html;
+                } else {
+                    dbMetricsArea.innerHTML = '<p class="text-warning">暂无训练指标数据</p>';
+                }
+                
+            } catch (error) {
+                console.error('Load database metrics error:', error);
+                dbMetricsArea.innerHTML = '<p class="text-danger">加载失败</p>';
+            }
+        }
+
+        async function exportDatabase() {
+            const exportBtn = document.getElementById('exportDatabaseBtn');
+            const originalText = exportBtn.textContent;
+            
+            exportBtn.disabled = true;
+            exportBtn.textContent = '导出中...';
+            
+            try {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const filename = `gdp_prediction_data_${timestamp}.sql`;
+                
+                const response = await fetch(`${API_BASE}/gdp/db/export`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ filename })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification(`数据库导出成功: ${data.filename}`, 'success');
+                } else {
+                    showNotification(`导出失败: ${data.message}`, 'danger');
+                }
+                
+            } catch (error) {
+                console.error('Export database error:', error);
+                showNotification('导出过程中发生错误', 'danger');
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.textContent = originalText;
+            }
+        }
+
+        // ===================================
+        // 5. 页面初始化
+        // ===================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchTables();
+            setupCouplingAnalysis();
+            document.getElementById('refreshSpatialDataBtn').onclick = refreshSpatialData;
+            document.getElementById('loadSpatialYearsBtn').onclick = loadSpatialAvailableYears;
+            document.getElementById('loadSpatialStatsBtn').onclick = loadSpatialStats;
+            document.getElementById('loadSpatialGeoJsonBtn').onclick = loadSpatialGeoJson;
+            loadSpatialAvailableYears();
+            setupPredictUI();
+        });
+    </script>
+</body>
+</html>

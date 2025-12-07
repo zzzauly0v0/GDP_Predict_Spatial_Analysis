@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDP预测系统 API 接口测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .header-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+        .api-card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .api-card:hover {
+            transform: translateY(-2px);
+        }
+        .method-badge {
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .response-area {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        .loading {
+            color: #6c757d;
+        }
+        .success {
+            color: #198754;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .param-input {
+            margin-bottom: 10px;
+        }
+        .copy-btn {
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header-bg">
+        <div class="container">
+            <h1 class="text-center">🚀 GDP预测系统 API 接口测试</h1>
+            <p class="text-center lead">快速测试和查看所有 API 接口</p>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- 基础数据 API -->
+        <div class="row">
+            <div class="col-12">
+                <h3 class="mb-4">📊 基础数据 API</h3>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card api-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            获取数据库表列表
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/tables</code></p>
+                        <p><strong>描述：</strong> 获取所有数据库表的信息</p>
+                        <button class="btn btn-primary btn-sm" onclick="testAPI('/api/tables', 'GET', null, 'tables-response')">
+                            🧪 测试接口
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm copy-btn ms-2" onclick="copyToClipboard('http://localhost:5000/api/tables')">
+                            📋 复制链接
+                        </button>
+                        <div id="tables-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card api-card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            获取表数据
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/{table_name}</code></p>
+                        <p><strong>描述：</strong> 获取指定表的数据（支持分页）</p>
+                        <div class="param-input">
+                            <label class="form-label">表名：</label>
+                            <select class="form-select" id="table-name-select">
+                                <option value="年度数据">年度数据</option>
+                                <option value="人口数据">人口数据</option>
+                                <option value="消费品数据">消费品数据</option>
+                                <option value="gdp_predictions">GDP预测数据</option>
+                                <option value="model_training_metrics">训练指标</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-info btn-sm" onclick="testTableData()">
+                            🧪 测试接口
+                        </button>
+                        <div id="table-data-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 耦合协调度分析 API -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h3 class="mb-4">🔗 耦合协调度分析 API</h3>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card api-card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            获取分析数据
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/data</code></p>
+                        <p><strong>描述：</strong> 获取指定年份的耦合协调度分析数据</p>
+                        <div class="param-input">
+                            <label class="form-label">年份：</label>
+                            <input type="number" class="form-control" id="coupling-year" value="2024" min="2005" max="2030">
+                        </div>
+                        <button class="btn btn-warning btn-sm" onclick="testCouplingData()">
+                            🧪 测试接口
+                        </button>
+                        <div id="coupling-data-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card api-card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            获取地区排名
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/regions</code></p>
+                        <p><strong>描述：</strong> 获取指定年份的地区排名列表</p>
+                        <div class="param-input">
+                            <label class="form-label">年份：</label>
+                            <input type="number" class="form-control" id="regions-year" value="2024" min="2005" max="2030">
+                        </div>
+                        <button class="btn btn-warning btn-sm" onclick="testRegionsData()">
+                            🧪 测试接口
+                        </button>
+                        <div id="regions-data-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card api-card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            获取可用年份
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/years</code></p>
+                        <p><strong>描述：</strong> 获取耦合协调度分析可用的年份列表</p>
+                        <button class="btn btn-warning btn-sm" onclick="testAPI('/api/years', 'GET', null, 'years-response')">
+                            🧪 测试接口
+                        </button>
+                        <div id="years-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GDP预测 API -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h3 class="mb-4">🔮 GDP预测 API</h3>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card api-card">
+                    <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            获取历史GDP数据
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/gdp/historical/{province}</code></p>
+                        <p><strong>描述：</strong> 获取指定省份的历史GDP数据</p>
+                        <div class="param-input">
+                            <label class="form-label">省份：</label>
+                            <select class="form-select" id="historical-province">
+                                <option value="北京市">北京市</option>
+                                <option value="上海市">上海市</option>
+                                <option value="广东省">广东省</option>
+                                <option value="江苏省">江苏省</option>
+                                <option value="浙江省">浙江省</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-purple btn-sm" style="background-color: #6f42c1;" onclick="testHistoricalData()">
+                            🧪 测试接口
+                        </button>
+                        <div id="historical-data-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card api-card">
+                    <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            获取GDP预测
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/gdp/predict/{province}</code></p>
+                        <p><strong>描述：</strong> 获取指定省份的GDP预测值</p>
+                        <div class="param-input">
+                            <label class="form-label">省份：</label>
+                            <select class="form-select" id="predict-province">
+                                <option value="北京市">北京市</option>
+                                <option value="上海市">上海市</option>
+                                <option value="广东省">广东省</option>
+                                <option value="江苏省">江苏省</option>
+                                <option value="浙江省">浙江省</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-purple btn-sm" style="background-color: #6f42c1;" onclick="testPredictData()">
+                            🧪 测试接口
+                        </button>
+                        <div id="predict-data-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card api-card">
+                    <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            获取训练指标
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/gdp/metrics/{province}</code></p>
+                        <p><strong>描述：</strong> 获取指定省份的模型训练指标</p>
+                        <div class="param-input">
+                            <label class="form-label">省份：</label>
+                            <select class="form-select" id="metrics-province">
+                                <option value="北京市">北京市</option>
+                                <option value="上海市">上海市</option>
+                                <option value="广东省">广东省</option>
+                                <option value="江苏省">江苏省</option>
+                                <option value="浙江省">浙江省</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-purple btn-sm" style="background-color: #6f42c1;" onclick="testMetricsData()">
+                            🧪 测试接口
+                        </button>
+                        <div id="metrics-data-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 空间分析 API -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h3 class="mb-4">🗺️ 空间分析 API</h3>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card api-card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            可用年份
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/spatial/available-years</code></p>
+                        <p><strong>描述：</strong> 获取空间分析可用年份</p>
+                        <button class="btn btn-secondary btn-sm" onclick="testAPI('/api/spatial/available-years', 'GET', null, 'spatial-years-response')">
+                            🧪 测试接口
+                        </button>
+                        <div id="spatial-years-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card api-card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">GET</span>
+                            空间数据
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/spatial/data/{year}</code></p>
+                        <p><strong>描述：</strong> 获取指定年份的空间分析数据</p>
+                        <div class="param-input">
+                            <label class="form-label">年份：</label>
+                            <input type="number" class="form-control" id="spatial-data-year" value="2024">
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testSpatialData()">
+                            🧪 测试接口
+                        </button>
+                        <div id="spatial-data-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card api-card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <span class="badge bg-warning method-badge me-2">POST</span>
+                            刷新数据
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/spatial/refresh</code></p>
+                        <p><strong>描述：</strong> 手动刷新空间分析数据</p>
+                        <button class="btn btn-secondary btn-sm" onclick="testAPI('/api/spatial/refresh', 'POST', {}, 'spatial-refresh-response')">
+                            🧪 测试接口
+                        </button>
+                        <div id="spatial-refresh-response" class="response-area mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 返回主页按钮 -->
+        <div class="row mt-5 mb-4">
+            <div class="col-12 text-center">
+                <a href="/" class="btn btn-outline-primary btn-lg">
+                    🏠 返回管理后台
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '';
+
+        // 通用API测试函数
+        async function testAPI(endpoint, method = 'GET', data = null, responseId) {
+            const responseArea = document.getElementById(responseId);
+            responseArea.style.display = 'block';
+            responseArea.innerHTML = '<div class="loading">🔄 请求中...</div>';
+
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (data && method !== 'GET') {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(API_BASE + endpoint, options);
+                const result = await response.json();
+
+                responseArea.innerHTML = `
+                    <div class="success">✅ 状态码: ${response.status}</div>
+                    <div class="mt-2"><strong>响应数据:</strong></div>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+            } catch (error) {
+                responseArea.innerHTML = `
+                    <div class="error">❌ 请求失败</div>
+                    <div class="mt-2"><strong>错误信息:</strong></div>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('链接已复制到剪贴板！');
+            });
+        }
+
+        // 测试表数据
+        function testTableData() {
+            const tableName = document.getElementById('table-name-select').value;
+            testAPI(`/api/${tableName}`, 'GET', null, 'table-data-response');
+        }
+
+        // 测试耦合数据
+        function testCouplingData() {
+            const year = document.getElementById('coupling-year').value;
+            testAPI(`/api/data?year=${year}`, 'GET', null, 'coupling-data-response');
+        }
+
+        // 测试地区数据
+        function testRegionsData() {
+            const year = document.getElementById('regions-year').value;
+            testAPI(`/api/regions?year=${year}`, 'GET', null, 'regions-data-response');
+        }
+
+        // 测试历史数据
+        function testHistoricalData() {
+            const province = document.getElementById('historical-province').value;
+            testAPI(`/api/gdp/historical/${province}`, 'GET', null, 'historical-data-response');
+        }
+
+        // 测试预测数据
+        function testPredictData() {
+            const province = document.getElementById('predict-province').value;
+            testAPI(`/api/gdp/predict/${province}`, 'GET', null, 'predict-data-response');
+        }
+
+        // 测试训练指标
+        function testMetricsData() {
+            const province = document.getElementById('metrics-province').value;
+            testAPI(`/api/gdp/metrics/${province}`, 'GET', null, 'metrics-data-response');
+        }
+
+
+
+        // 测试空间数据
+        function testSpatialData() {
+            const year = document.getElementById('spatial-data-year').value;
+            testAPI(`/api/spatial/data/${year}`, 'GET', null, 'spatial-data-response');
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('API测试页面已加载');
+        });
+    </script>
+</body>
+</html>
