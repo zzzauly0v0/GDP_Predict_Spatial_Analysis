@@ -296,6 +296,57 @@
                 </div>
             </div>
 
+            <div class="col-md-6">
+                <div class="card api-card">
+                    <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                        <h5 class="mb-0">
+                            <span class="badge bg-success method-badge me-2">POST</span>
+                            自定义数据预测
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>接口地址：</strong> <code>/api/gdp/predict_custom</code></p>
+                        <p><strong>描述：</strong> 通过上传CSV文件进行GDP预测</p>
+                        
+                        <div class="param-input">
+                            <label class="form-label">省份：</label>
+                            <select class="form-select" id="custom-predict-province">
+                                <option value="北京市">北京市</option>
+                                <option value="上海市">上海市</option>
+                                <option value="广东省">广东省</option>
+                                <option value="江苏省">江苏省</option>
+                                <option value="浙江省">浙江省</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small">📝 人口文件 (CSV)</label>
+                            <input type="file" class="form-control form-control-sm" id="custom-population-file">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small">💳 消费文件 (CSV)</label>
+                            <input type="file" class="form-control form-control-sm" id="custom-consumption-file">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small">📈 GDP文件 (CSV)</label>
+                            <input type="file" class="form-control form-control-sm" id="custom-gdp-file">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small">💰 财政文件 (CSV)</label>
+                            <input type="file" class="form-control form-control-sm" id="custom-financial-file">
+                        </div>
+                        
+                        <button class="btn btn-purple btn-sm w-100" style="background-color: #6f42c1;" onclick="testCustomPrediction()">
+                            🧪 上传并测试
+                        </button>
+                        
+                        <div id="custom-predict-response" class="response-area mt-3 small" style="display: none; max-height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 空间分析 API -->
@@ -461,7 +512,71 @@
             testAPI(`/api/gdp/metrics/${province}`, 'GET', null, 'metrics-data-response');
         }
 
+        // 测试自定义数据预测
+        function testCustomPrediction() {
+            const province = document.getElementById('custom-predict-province').value;
+            const responseArea = document.getElementById('custom-predict-response');
+            responseArea.style.display = 'block';
+            responseArea.innerHTML = '<div class="loading">🔄 正在上传并预测...</div>';
 
+            // 检查文件
+            const files = {
+                population: document.getElementById('custom-population-file').files[0],
+                consumption: document.getElementById('custom-consumption-file').files[0],
+                gdp: document.getElementById('custom-gdp-file').files[0],
+                financial: document.getElementById('custom-financial-file').files[0]
+            };
+
+            // 验证选择
+            if (!province) {
+                responseArea.innerHTML = '<div class="error">❌ 请选择省份</div>';
+                return;
+            }
+
+            for (const [type, file] of Object.entries(files)) {
+                if (!file || !file.name.toLowerCase().endsWith('.csv')) {
+                    responseArea.innerHTML = `<div class="error">❌ 请上传${type}的CSV文件</div>`;
+                    return;
+                }
+            }
+
+            // 构建表单数据
+            const formData = new FormData();
+            formData.append('province', province);
+            Object.entries(files).forEach(([key, file]) => {
+                formData.append(key, file);
+            });
+
+            // 发送请求 - 修复响应处理
+            fetch(API_BASE + '/api/gdp/predict_custom', {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                const status = response.status;
+                const data = await response.json();
+                return { status, data };
+            })
+            .then(result => {
+                let content = `<div class="success">✅ 预测成功 (状态码: ${result.status})</div>`;
+                if (result.data.success) {
+                    content += `
+                    <div class="mt-3"><strong>预测结果:</strong></div>
+                    <pre>${JSON.stringify(result.data.data, null, 2)}</pre>
+                    `;
+                } else {
+                    content += `<div class="error mt-2">❌ ${result.data.message || '预测失败'}</div>`;
+                }
+                responseArea.innerHTML = content;
+            })
+            .catch(error => {
+                responseArea.innerHTML = `
+                <div class="error">❌ 请求失败</div>
+                <div class="mt-2"><strong>错误信息:</strong></div>
+                <pre>${error.message}</pre>
+                `;
+            });
+        }
 
         // 测试空间数据
         function testSpatialData() {

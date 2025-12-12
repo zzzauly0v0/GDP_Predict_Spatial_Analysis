@@ -200,27 +200,24 @@ def perform_real_spatial_analysis():
 
 def get_spatial_available_years_route():
     """获取已生成的空间分析年份列表"""
-    try:
-        file_path = f"{CFG['out_dir']}/available_years.json"
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-        else:
-            data = {
-                "available_years": [],
-                "total_count": 0,
-                "status": "no_data",
-                "message": "请先运行数据刷新"
-            }
-        return data, 200
+    years_file = f"{CFG['out_dir']}/available_years.json"
+    if os.path.exists(years_file):
+        with open(years_file, 'r', encoding='utf-8') as f:
+            years_data = json.load(f)
 
-    except Exception as e:
-        return {
-            "available_years": [],
-            "total_count": 0,
-            "status": "error",
-            "message": str(e)
-        }, 500
+        # 检查每个年份的SHP文件是否存在
+        all_exist = True
+        for year in years_data.get('available_years', []):
+            clean_year = year.replace(' ', '_').replace('/', '_')
+            shp_path = f"{CFG['out_dir']}/{clean_year}_spatial_analysis.shp"
+            if not os.path.exists(shp_path):
+                all_exist = False
+                break
+
+        if all_exist:
+            print(f"✓ 发现已有 {len(years_data['available_years'])} 个年份的分析结果")
+            print(f"✓ 跳过分析，直接使用现有结果")
+            return True  # 直接返回成功，不执行后面的分析代码
 
 def get_spatial_data_api_route(year):
     """获取指定年份的 GeoJSON 空间分析结果"""

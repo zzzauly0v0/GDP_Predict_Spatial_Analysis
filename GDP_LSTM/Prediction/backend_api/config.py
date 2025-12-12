@@ -11,6 +11,7 @@ CFG = {
         'user': 'root',
         'database': '工程实践',
         'port': 3306,
+        'password': '123456',
         'charset': 'utf8mb4'
     },
     "db_table": "年度数据",

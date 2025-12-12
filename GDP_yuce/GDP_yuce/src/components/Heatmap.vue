@@ -93,6 +93,75 @@ export default {
     
     // 存储省份标签图层
     const provinceLabelsLayer = ref(null)
+    // 存储九段线图层
+    const nineDashLineLayer = ref(null) // 【新增】九段线图层引用
+    
+    // 【新增】九段线 GeoJSON 数据
+    const ninedashLineGeoJSON = {
+        "type": "Feature",
+        "properties": {
+            "name": "十段线",
+            "name_en": "Nine-dash_line"
+        },
+        "geometry": {
+            "type": "MultiLineString",
+            "coordinates": [
+                [
+                    [109.51763678906526, 16.360467782665847],
+                    [109.72339159230361, 16.05587198177934],
+                    [109.8780414893003, 15.766823920473868],
+                    [109.96506402665503, 15.526031073258686],
+                    [109.98526818797363, 15.335615618596712]
+                ],
+                [
+                    [110.48331454715199, 12.431407837351566],
+                    [110.48240767589328, 12.085792287259398],
+                    [110.45136562643113, 11.863835000833953],
+                    [109.98526818797363, 15.335615618596712],
+                    [109.8780414893003, 15.766823920473868],
+                    [110.25652028695671, 11.393616070326182]
+                ],
+                [
+                    [108.3388949586325, 7.26656318024262],
+                    [108.30727608084116, 6.727803403200289],
+                    [108.35631901989032, 6.112648053307836]
+                ],
+                [
+                    [111.94112275674237, 3.553559321848772],
+                    [112.40151782268552, 3.646409974664658],
+                    [112.92104341055976, 3.845112027649191]
+                ],
+                [
+                    [115.69079809651517, 7.29016984601141],
+                    [116.4095482213759, 8.137962397303875]
+                ],
+                [
+                    [118.63503455703679, 11.080904139262175],
+                    [118.85587024190139, 11.457907321145406],
+                    [119.10128629647166, 12.062751715859875],
+                    [119.12181771101825, 12.135585760471585]
+                ],
+                [
+                    [119.60808384544805, 18.143451232827125],
+                    [119.91075760817219, 18.77194701315816],
+                    [120.11918953031866, 19.117669954512905]
+                ],
+                [
+                    [121.40591812413318, 20.8001943859176],
+                    [122.12216430894797, 21.716094829922323]
+                ],
+                [
+                    [122.80328441666389, 23.665545127578547],
+                    [123.00481138309124, 24.74934291726869]
+                ],
+                [
+                    [119.16836075308866, 15.107448879733406],
+                    [119.16981236678279, 15.755038547478351],
+                    [119.17823197590195, 16.265658015720753]
+                ]
+            ]
+        }
+    }
     
     const manualCenters = {
       '河北省': [39.0, 115.5], 
@@ -105,7 +174,7 @@ export default {
       '台湾省': [23.7, 121.0]
     };
     
-    // 颜色配置
+    // 颜色配置... (略)
     const colorSchemes = {
       default: {
         gdp: {
@@ -192,7 +261,39 @@ export default {
             showInfoPanel.value = false
           }
         })
+        
+        // 【新增】在地图初始化后加载九段线
+        loadNineDashLine();
       }
+    }
+
+    // 【新增方法】加载并渲染九段线
+    const loadNineDashLine = () => {
+        const currentMap = map.value;
+        if (!currentMap) {
+            console.error("地图对象未初始化，无法加载九段线。");
+            return;
+        }
+
+        // 如果图层已存在，先移除
+        if (nineDashLineLayer.value) {
+            currentMap.removeLayer(nineDashLineLayer.value);
+        }
+
+        // 使用 L.geoJSON 添加九段线数据
+        nineDashLineLayer.value = L.geoJSON(ninedashLineGeoJSON, {
+            style: {
+                color: '#444444', // 线的颜色 (深灰色)
+                weight: 1.5,      // 线的粗细
+                opacity: 0.9,     // 透明度
+                // Leaflet 不直接支持 line-dasharray，但可以通过 dashArray 模拟虚线
+                dashArray: '5, 5', // 虚线样式: 5px 实线, 5px 空白
+                fill: false,
+                interactive: false // 九段线不响应鼠标事件
+            }
+        }).addTo(currentMap);
+        
+        console.log('九段线已成功加载到地图。');
     }
 
     // 添加省份名称标签
@@ -348,7 +449,7 @@ export default {
       }
     }
 
-    // 获取样式函数
+    // 获取样式函数... (略)
     const getStyleFunction = (dataType, colors) => {
       return function(feature) {
         const props = feature.properties
@@ -398,7 +499,7 @@ export default {
       }
     }
 
-    // 更新图例
+    // 更新图例... (略)
     const updateLegend = (dataType, colors) => {
       const legendContent = document.getElementById('legend-content')
       let legendHTML = ''
@@ -449,7 +550,7 @@ export default {
       showInfoPanel.value = true
     }
 
-    // 加载年份统计信息
+    // 加载年份统计信息... (略)
     const loadYearStats = async (year) => {
       try {
         const response = await getSpatialYearStats(year)
@@ -467,7 +568,7 @@ export default {
       }
     }
 
-    // 刷新空间数据
+    // 刷新空间数据... (略)
     const refreshData = async () => {
       try {
         loading.value = true

@@ -322,7 +322,50 @@ def get_gdp_prediction(province):
         print(f"预测失败: {e}")
         return jsonify({"success": False, "message": f"预测过程中发生错误: {str(e)}"}), 500
 
-
+@app.route('/api/gdp/predict_custom', methods=['POST'])
+def predict_gdp_custom_data():
+    if request.method != 'POST':
+        return jsonify({"success": False, "message": "仅支持POST方法"}), 405
+        
+    # 1. 检查四个CSV文件是否都存在
+    required_files = ['population', 'consumption', 'gdp', 'financial']
+    if any(file not in request.files for file in required_files):
+        return jsonify({"success": False, "message": "必须提供四个CSV文件：population, consumption, gdp, financial"}), 400
+    
+    province = request.form.get('province')
+    if province is None:
+        return jsonify({"success": False, "message": "缺少省份参数"}), 400
+    
+    try:
+        # 2. 读取每个上传的CSV文件
+        dfs = []
+        for file_key in required_files:
+            csv_file = request.files[file_key]
+            df = pd.read_csv(csv_file.stream)
+            
+            # 检查是否有目标省份列
+            if province not in df.columns:
+                return jsonify({"success": False, "message": f"CSV文件 {file_key} 缺少省份列: {province}"}), 400
+            dfs.append(df)
+        
+        # 3. 获取预测器并加载自定义数据
+        predictor = get_predictor_service(province)
+        predictor.load_custom_data(*dfs)
+        
+        # 4. 执行预测
+        prediction_result = predictor.predict_gdp()
+        
+        return jsonify({
+            "success": True,
+            "province": province,
+            "data": prediction_result['predictions']
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "message": f"预测失败: {str(e)}"}), 500
+    
 # ==================== 主程序入口 ====================
 
 if __name__ == '__main__':
@@ -344,4 +387,4 @@ if __name__ == '__main__':
     print("=" * 60)
     # ... (其余打印信息)
 
-    app.run(debug=True)
+    app.run(debug=False)

@@ -105,6 +105,52 @@ class GDPPredictorService:
         last_start_index = len(data_scaled) - WINDOW_SIZE
         self.last_sequence = data_scaled[last_start_index: last_start_index + WINDOW_SIZE]
 
+    def load_custom_data(self, population_df, consumption_df, gdp_df, financial_df):
+        """加载来自于api上传的自定义数据，并更新 scaler 和最后的输入序列"""
+        try:
+            print(f"[DEBUG] 正在加载自定义数据，省份: {self.province}")
+            # 确保数据列名一致
+            province = self.province
+            # 检查数据类型
+            print(f"[DEBUG] 数据类型检查: 人口({type(population_df)}), 消费({type(consumption_df)}), GDP({type(gdp_df)}), 财政({type(financial_df)})")
+            population = population_df[province]  # 单位是万
+            consumption = consumption_df[province]  # 单位是亿
+            gdp = gdp_df[province]  # 单位是亿
+            financial = financial_df[province]  # 单位是亿
+
+            # 拼接表格
+            origin_data = pd.concat(
+                [population, consumption, gdp, financial],
+                axis=1
+            )
+            origin_data.columns = ['population', 'consumption', 'GDP', 'financial']
+
+            # 翻转时间顺序
+            origin_data_reversed = origin_data.iloc[::-1].reset_index(drop=True)
+
+            # 转换为numpy数组并进行归一化
+            data_for_scaling = origin_data_reversed.values
+            self.scaler = MinMaxScaler()
+            data_scaled = self.scaler.fit_transform(data_for_scaling)
+
+            # 更新原始数据
+            self.origin_data = origin_data_reversed
+
+            # 也使用data_for_scaling和data_scaled
+            # 更新实例变量
+            self.scaler.fit(self.origin_data.values)
+
+            # 获取最后WINDOW_SIZE长度的数据作为预测输入
+            if len(data_scaled) < WINDOW_SIZE:
+                raise ValueError(f"自定义数据长度不足 ({len(data_scaled)})，无法形成历史窗口 ({WINDOW_SIZE})。")
+            
+            last_start_index = len(data_scaled) - WINDOW_SIZE
+            self.last_sequence = data_scaled[last_start_index: last_start_index + WINDOW_SIZE]
+
+        except Exception as e:
+            raise RuntimeError(f"加载自定义数据失败: {str(e)}")
+        
+
     def predict_gdp(self) -> dict:
         """执行 ONNX 模型推理并返回反归一化的预测结果。"""
         if self.session is None or self.last_sequence is None:
