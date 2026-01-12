@@ -9,12 +9,12 @@ CFG = {
     "db_config": {
         'host': 'localhost',
         'user': 'root',
-        'database': '工程实践',
+        'database': '工程实践', # 修改成你的数据库名称
         'port': 3306,
-        'password': '123456',
+        'password': '123456', # 修改成你的数据库密码
         'charset': 'utf8mb4'
     },
-    "db_table": "年度数据",
+    "db_table": "年度数据", # 用于空间分析的数据库表
     "join_key_shp": "name",
     "join_key_db": "地区",
     "out_dir": "output",
@@ -23,14 +23,14 @@ CFG = {
 
 # 数据库连接配置
 MYSQL_USER = 'root'
-MYSQL_PASSWORD = '123456'
+MYSQL_PASSWORD = '123456' # 修改成你的数据库密码
 MYSQL_HOST = 'localhost'
 MYSQL_PORT = 3306
-MYSQL_DB_NAME = '工程实践'
+MYSQL_DB_NAME = '工程实践' # 修改成你的数据库名称
 
 MYSQL_URI = f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB_NAME}'
 
-# 目标表列表
+# 目标表列表 (按需修改)
 TARGET_TABLES = [
     '人口数据', '地方财政支出数据', '季度指数数据',
     '季度数据', '年度数据', '消费品数据',

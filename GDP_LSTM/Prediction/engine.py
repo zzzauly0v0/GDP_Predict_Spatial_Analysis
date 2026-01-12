@@ -3,6 +3,8 @@ import numpy as np
 import torch
 from tqdm.auto import tqdm
 from timeit import default_timer as timer
+import matplotlib.pyplot as plt
+import os
 
 torch.manual_seed(42)
 
@@ -155,55 +157,46 @@ def train(model,
         results['test_mae'].append(test_mae)
         results['test_mse'].append(test_mse)
         results['test_mape'].append(test_mape)
+    # 创建保存图像的目录
+    os.makedirs('parm', exist_ok=True)
+    
+    # 绘制并保存训练指标图表
+    epochs = range(1, num_epochs + 1)
+    
+    # MAE趋势图
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, results['train_mae'], 'b-', label='Training MAE')
+    plt.plot(epochs, results['test_mae'], 'r-', label='Testing MAE')
+    plt.title('MAE Trend')
+    plt.xlabel('Epochs')
+    plt.ylabel('MAE')
+    plt.legend()
+    plt.savefig(os.path.join('parm', 'mae_plot.png'))
+    plt.close()
+
+    # MSE趋势图
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, results['train_mse'], 'b-', label='Training MSE')
+    plt.plot(epochs, results['test_mse'], 'r-', label='Testing MSE')
+    plt.title('MSE Trend')
+    plt.xlabel('Epochs')
+    plt.ylabel('MSE')
+    plt.legend()
+    plt.savefig(os.path.join('parm', 'mse_plot.png'))
+    plt.close()
+
+    # MAPE趋势图
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, results['train_mape'], 'b-', label='Training MAPE')
+    plt.plot(epochs, results['test_mape'], 'r-', label='Testing MAPE')
+    plt.title('MAPE Trend (%)')
+    plt.xlabel('Epochs')
+    plt.ylabel('MAPE (%)')
+    plt.legend()
+    plt.savefig(os.path.join('parm', 'mape_plot.png'))
+    plt.close()
+
     return results
-
-# def predict(model,
-#             data,
-#             device:str):
-#     model.eval()
-#     # 处理单数据
-#     data = data[12]
-#     data = torch.from_numpy(data).float().to(device).unsqueeze(0)
-#     with torch.no_grad():
-#         predictions = model(data)
-#
-#     pre_np = predictions.cpu().detach().numpy()
-#     pre_2d = pre_np.reshape(-1, 1)
-#     GDP_COL_INDEX = 2
-#     temp_inverse_input = np.zeros((pre_2d.shape[0], 4))
-#     temp_inverse_input[:, GDP_COL_INDEX] = pre_2d.flatten()
-#
-#     return temp_inverse_input
-
-# def predict(model,
-#             data,
-#             device: str):
-#     model.eval()
-#     # 1. 确保转为 Tensor
-#     if not torch.is_tensor(data):
-#         data = torch.from_numpy(data).float()
-#
-#     data = data.to(device)
-#
-#     if data.dim() == 2:
-#         data = data.unsqueeze(0)
-#
-#     # 3. 模型预测 (一次性算出所有结果)
-#     with torch.no_grad():
-#         predictions = model(data)
-#
-#     pre_np = predictions.cpu().detach().numpy()
-#     pre_2d = pre_np.reshape(-1, 1)
-#
-#     GDP_COL_INDEX = 2
-#     temp_inverse_input = np.zeros((pre_2d.shape[0], 4))
-#     temp_inverse_input[:, GDP_COL_INDEX] = pre_2d.flatten()
-#
-#     return temp_inverse_input
-
-# 文件: engine.py
-
-# ... (保留导入和其它函数)
 
 def predict(model,
             data,

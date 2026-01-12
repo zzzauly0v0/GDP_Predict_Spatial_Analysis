@@ -1,3 +1,4 @@
+// src/api/index.js
 import request from '../utils/request'
 
 export const getPopulationData = () => {
@@ -52,4 +53,9 @@ export const getGDPPrediction = (province) => {
 
 export const getGDPMetrics = (province) => {
   return request.get(`/gdp/metrics/${encodeURIComponent(province)}`)
+}
+
+// GDP 自定义数据预测API (通过 POST 请求发送 FormData 文件数据)
+export const getGDPPredictionCustom = (formData) => {
+  return request.post('/gdp/predict_custom', formData) 
 }

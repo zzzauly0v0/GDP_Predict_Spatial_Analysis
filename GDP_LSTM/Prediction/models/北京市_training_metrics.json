@@ -1,6 +1,6 @@
 {
   "province": "北京市",
-  "saved_at": "2025-12-07T12:59:42.136608",
+  "saved_at": "2025-12-20T23:01:14.215475",
   "num_epochs": 100,
   "hyperparams": {
     "input_feature_size": 4,

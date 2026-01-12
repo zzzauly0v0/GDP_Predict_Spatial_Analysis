@@ -1,10 +1,12 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
+
+# 划分训练集的窗口
 def create_training_sequences(data, input_window, output_steps, target_index):
     X, Y = [], []
     N_total = len(data)
-    #17到22年
+    
     N_sequences = N_total - input_window - output_steps + 1
 
     for i in range(N_sequences):

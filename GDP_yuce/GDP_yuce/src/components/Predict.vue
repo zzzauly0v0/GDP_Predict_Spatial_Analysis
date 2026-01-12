@@ -1,11 +1,9 @@
 <template>
   <div class="gdp-prediction-container">
-    <!-- 标题区域 -->
     <div class="header-section">
       <h2>GDP预测分析</h2>
     </div>
 
-    <!-- 数据来源选择区域 -->
     <div class="control-section">
       <el-card shadow="hover">
         <template #header>
@@ -23,7 +21,6 @@
       </el-card>
     </div>
 
-    <!-- 省份选择区域 -->
     <div class="control-section" v-if="dataSource === 'province'">
       <el-card shadow="hover">
         <template #header>
@@ -78,97 +75,158 @@
       </el-card>
     </div>
 
-    <!-- 自定义数据上传区域 -->
-    <div class="control-section" v-if="dataSource === 'custom'">
-      <el-card shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>自定义数据上传</span>
-          </div>
-        </template>
-        
-        <div class="control-content">
-          <!-- 省份选择 -->
-          <el-row :gutter="20" align="middle" class="mb-20">
-            <el-col :span="24">
-              <el-form label-width="100px">
-                <el-form-item label="选择模型省份">
-                  <el-select 
-                    v-model="selectedProvinceForCustom" 
-                    placeholder="请选择省份以使用对应预测模型"
-                    style="width: 100%"
-                  >
-                    <el-option
-                      v-for="province in provinces"
-                      :key="province"
-                      :label="province"
-                      :value="province"
-                    />
-                  </el-select>
-                  <div class="el-upload__tip">
-                    请选择您要使用的预测模型对应的省份
-                  </div>
-                </el-form-item>
-              </el-form>
-            </el-col>
-          </el-row>
-          
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-upload
-                class="upload-demo"
-                action=""
-                :auto-upload="false"
-                :on-change="handleFileUpload"
-                :show-file-list="false"
-                accept=".csv,.xlsx,.xls"
+   <div class="control-section" v-if="dataSource === 'custom'">
+  <el-card shadow="hover">
+    <template #header>
+      <div class="card-header">
+        <span>自定义数据上传</span>
+        <el-tag type="warning" size="small">需要4个独立的CSV文件</el-tag>
+      </div>
+    </template>
+    
+    <div class="control-content">
+      <el-row :gutter="20" align="middle" class="mb-20">
+        <el-col :span="24">
+          <el-form label-width="120px">
+            <el-form-item label="选择预测模型">
+              <el-select 
+                v-model="selectedProvinceForCustom" 
+                placeholder="请选择预测模型对应的省份"
+                style="width: 100%"
               >
-                <el-button type="primary" :disabled="!selectedProvinceForCustom">
-                  选择数据文件
-                </el-button>
-                <template #tip>
-                  <div class="el-upload__tip">
-                    支持CSV，包含年份和GDP两列
-                  </div>
-                </template>
-              </el-upload>
-            </el-col>
-            
-            <el-col :span="12">
-              <div class="action-buttons">
-                <el-button 
-                  type="success" 
-                  @click="runCustomPrediction"
-                  :disabled="!customData.length || !selectedProvinceForCustom"
-                  :loading="predicting"
-                >
-                  执行预测
-                </el-button>
+                <el-option
+                  v-for="province in provinces"
+                  :key="province"
+                  :label="province"
+                  :value="province"
+                />
+              </el-select>
+              <div class="el-upload__tip">
+                选择与您数据特征最相似的省份模型
               </div>
-            </el-col>
-          </el-row>
-          
-          <div v-if="customData.length" class="custom-data-preview">
-            <h4>数据预览 (前5行)</h4>
-            <el-table 
-              :data="customData.slice(0, 5)"
-              height="200"
-              stripe
-              border
-            >
-              <el-table-column prop="year" label="年份" width="100" />
-              <el-table-column prop="gdp" label="GDP（亿元）">
-                <template #default="{ row }">
-                  {{ formatNumber(row.gdp) }}
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </div>
-      </el-card>
-    </div>
+            </el-form-item>
+          </el-form>
+        </el-col>
+      </el-row>
+      
+      <el-alert
+        title="文件和格式要求"
+        type="info"
+        :description="dataFormatDescription"
+        show-icon
+        :closable="false"
+        class="mb-20"
+      />
+      
+      <el-row :gutter="20" class="file-upload-grid">
+        <el-col :span="12">
+          <label>1. 年度GDP数据 (`gdp`)</label>
+          <el-upload
+            class="upload-box"
+            action="#"
+            :auto-upload="false"
+            :on-change="(file) => handleFileChange(file, 'gdp')"
+            :show-file-list="false"
+            accept=".csv"
+          >
+            <el-button type="primary" size="small">
+              {{ customFiles.gdp ? '已选择' : '选择文件' }}
+            </el-button>
+            <span class="file-name-tag" v-if="customFiles.gdp">
+              {{ customFiles.gdp.name }}
+            </span>
+            <div class="el-upload__tip">
+              必须包含年份和对应省份的GDP列
+            </div>
+          </el-upload>
+        </el-col>
+        
+        <el-col :span="12">
+          <label>2. 人口数据 (`population`)</label>
+          <el-upload
+            class="upload-box"
+            action="#"
+            :auto-upload="false"
+            :on-change="(file) => handleFileChange(file, 'population')"
+            :show-file-list="false"
+            accept=".csv"
+          >
+            <el-button type="primary" size="small">
+              {{ customFiles.population ? '已选择' : '选择文件' }}
+            </el-button>
+            <span class="file-name-tag" v-if="customFiles.population">
+              {{ customFiles.population.name }}
+            </span>
+            <div class="el-upload__tip">
+              必须包含年份和对应省份的人口列
+            </div>
+          </el-upload>
+        </el-col>
 
-    <!-- 图表展示区域 -->
+        <el-col :span="12">
+          <label>3. 消费品数据 (`consumption`)</label>
+          <el-upload
+            class="upload-box"
+            action="#"
+            :auto-upload="false"
+            :on-change="(file) => handleFileChange(file, 'consumption')"
+            :show-file-list="false"
+            accept=".csv"
+          >
+            <el-button type="primary" size="small">
+              {{ customFiles.consumption ? '已选择' : '选择文件' }}
+            </el-button>
+            <span class="file-name-tag" v-if="customFiles.consumption">
+              {{ customFiles.consumption.name }}
+            </span>
+            <div class="el-upload__tip">
+              必须包含年份和对应省份的消费品零售总额列
+            </div>
+          </el-upload>
+        </el-col>
+
+        <el-col :span="12">
+          <label>4. 财政支出数据 (`financial`)</label>
+          <el-upload
+            class="upload-box"
+            action="#"
+            :auto-upload="false"
+            :on-change="(file) => handleFileChange(file, 'financial')"
+            :show-file-list="false"
+            accept=".csv"
+          >
+            <el-button type="primary" size="small">
+              {{ customFiles.financial ? '已选择' : '选择文件' }}
+            </el-button>
+            <span class="file-name-tag" v-if="customFiles.financial_expenditure_data">
+              {{ customFiles.financial.name }}
+            </span>
+            <div class="el-upload__tip">
+              必须包含年份和对应省份的财政支出列
+            </div>
+          </el-upload>
+        </el-col>
+      </el-row>
+      
+      <el-row :gutter="20" class="mt-20">
+        <el-col :span="24">
+          <div class="action-buttons" style="justify-content: flex-start;">
+            <el-button 
+              type="success" 
+              @click="runCustomPrediction"
+              :disabled="!isCustomFilesValid"
+              :loading="predicting"
+            >
+              执行预测
+            </el-button>
+          </div>
+        </el-col>
+      </el-row>
+      
+      </div>
+  </el-card>
+</div>
+
     <div class="chart-section" v-if="hasData">
       <el-card shadow="hover">
         <template #header>
@@ -188,10 +246,8 @@
       </el-card>
     </div>
 
-    <!-- 数据展示区域 -->
     <div class="data-section">
       <el-row :gutter="20">
-        <!-- 历史数据 -->
         <el-col :span="12">
           <el-card shadow="hover" class="data-card">
             <template #header>
@@ -223,7 +279,6 @@
           </el-card>
         </el-col>
 
-        <!-- 预测结果 -->
         <el-col :span="12">
           <el-card shadow="hover" class="data-card">
             <template #header>
@@ -260,7 +315,6 @@
       </el-row>
     </div>
 
-    <!-- 统计信息 -->
     <div class="stats-section" v-if="hasData">
       <el-card shadow="hover">
         <template #header>
@@ -279,7 +333,6 @@
       </el-card>
     </div>
 
-    <!-- 训练指标展示区域 -->
     <div v-if="showMetrics && metricsData" class="metrics-section">
       <el-card shadow="hover">
         <template #header>
@@ -376,7 +429,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
-import { getGDPHistoricalData, getGDPPrediction, getGDPMetrics, getPopulationData } from '../api/index'
+// 导入修改后的 API 函数
+import { getGDPHistoricalData, getGDPPrediction, getGDPMetrics, getGDPPredictionCustom } from '../api/index'
 
 export default {
   name: 'GDPPrediction',
@@ -390,19 +444,29 @@ export default {
     const predicting = ref(false)
     const historicalData = ref([])
     const predictionData = ref([])
-    const customData = ref([])
     const chartType = ref('line') // 'line' 或 'bar'
-    const provinces = ref([]) // 改为响应式数组
-    const metricsData = ref(null) // 训练指标数据
-    const showMetrics = ref(false) // 控制指标显示
+    const provinces = ref([]) 
+    const metricsData = ref(null) 
+    const showMetrics = ref(false) 
     let chart = null
+
+    // *** 新增：存储上传的文件对象 ***
+    const customFiles = ref({
+      gdp: null,        
+      population: null, 
+      consumption: null, 
+      financial: null   
+})
+
 
     // 计算属性
     const hasData = computed(() => {
+      // 仅当 province 模式下有数据，或 custom 模式下有 predictionData 时才显示图表/统计
       return historicalData.value.length > 0 || predictionData.value.length > 0
     })
 
     const statistics = computed(() => {
+      // 保持不变
       const stats = []
       
       if (historicalData.value.length > 0) {
@@ -444,13 +508,32 @@ export default {
       
       return stats
     })
+    
+    // *** 修改：自定义数据有效性检查 ***
+    const isCustomFilesValid = computed(() => {
+      return selectedProvinceForCustom.value !== '' &&
+             customFiles.value.gdp !== null &&
+             customFiles.value.population !== null &&
+             customFiles.value.consumption !== null &&
+             customFiles.value.financial !== null
+    })
 
-    // 格式化训练指标数据用于表格显示
+    const dataFormatDescription = computed(() => {
+      return `您需要上传4个独立的CSV文件，每个文件都必须包含'年份'列(year)和您选择省份的数据列。
+例如，年度GDP文件需要包含：
+- year: 年份 (如 2020)
+- ${selectedProvinceForCustom.value || '您选择的省份名'}: 对应省份的数据 (如 GDP, 人口等)
+注意：文件中的省份列名必须与您上面选择的省份名称完全一致。`
+    })
+    // ******************************
+
+
+    // 格式化训练指标数据用于表格显示 (保持不变)
     const formatMetricsForTable = computed(() => {
       if (!metricsData.value || !metricsData.value.metrics) return [];
       
       const metrics = metricsData.value.metrics;
-      const numEpochs = metrics.train_loss.length;
+      const numEpochs = metrics.train_loss.length; 
       const result = [];
       
       for (let i = 0; i < numEpochs; i++) {
@@ -475,7 +558,16 @@ export default {
     const handleDataSourceChange = () => {
       historicalData.value = []
       predictionData.value = []
-      customData.value = []
+      // *** 切换时清空文件状态 ***
+      customFiles.value = {
+        gdp: null, 
+        population: null, 
+        consumption: null, 
+        financial: null, 
+      }
+      // **************************
+      showMetrics.value = false 
+      metricsData.value = null
       if (chart) {
         chart.dispose()
         chart = null
@@ -485,6 +577,8 @@ export default {
     const handleProvinceChange = () => {
       historicalData.value = []
       predictionData.value = []
+      showMetrics.value = false 
+      metricsData.value = null
       if (chart) {
         chart.dispose()
         chart = null
@@ -492,7 +586,7 @@ export default {
     }
 
     const loadProvinces = () => {
-      // 使用固定的省份列表（与后端 PROVINCES 一致）
+      // 保持不变
       provinces.value = [
         "北京市", "天津市", "上海市", "重庆市", 
         "内蒙古自治区", "广西壮族自治区", "西藏自治区", 
@@ -503,10 +597,10 @@ export default {
         "海南省", "四川省", "贵州省", "云南省", "陕西省",
         "甘肃省", "青海省"
       ];
-      console.log('已加载省份列表，共', provinces.value.length, '个省份');
     }
 
     const loadData = async () => {
+      // 保持不变
       if (!selectedProvince.value) {
         ElMessage.warning('请先选择省份')
         return
@@ -515,17 +609,15 @@ export default {
       loading.value = true
       try {
         const response = await getGDPHistoricalData(selectedProvince.value)
-        console.log('历史数据响应:', response)
-        
-        // 适配不同的API响应格式
-        // axios 返回的数据在 response.data 中
         const data = response.data;
         
         if (data.success && data.data) {
           historicalData.value = data.data
+          predictionData.value = []
+          showMetrics.value = false 
+          metricsData.value = null
           ElMessage.success('历史数据加载成功')
           
-          // 加载后更新图表
           nextTick(() => {
             renderChart()
           })
@@ -541,6 +633,7 @@ export default {
     }
 
     const runPrediction = async () => {
+      // 保持不变
       if (!selectedProvince.value) {
         ElMessage.warning('请先选择省份')
         return
@@ -548,23 +641,16 @@ export default {
 
       predicting.value = true
       try {
-        // 并行获取历史数据、预测数据和训练指标
         const [historicalRes, predictionRes, metricsRes] = await Promise.all([
           getGDPHistoricalData(selectedProvince.value),
           getGDPPrediction(selectedProvince.value),
           getGDPMetrics(selectedProvince.value)
         ]);
 
-        console.log('历史数据:', historicalRes);
-        console.log('预测数据:', predictionRes);
-        console.log('训练指标:', metricsRes);
-
-        // axios 返回的数据在 response.data 中
         const histData = historicalRes.data;
         const predData = predictionRes.data;
         const metricsDataRes = metricsRes.data;
 
-        // 检查响应
         if (!histData.success) {
           throw new Error(`获取历史数据失败: ${histData.message}`);
         }
@@ -572,23 +658,19 @@ export default {
           throw new Error(`获取预测数据失败: ${predData.message}`);
         }
         
-        // 更新数据
         historicalData.value = histData.data;
         predictionData.value = predData.data;
         
-        // 处理训练指标
         if (metricsDataRes.success && metricsDataRes.metrics) {
           metricsData.value = metricsDataRes.metrics;
           showMetrics.value = true;
         } else {
-          console.warn('训练指标加载失败:', metricsDataRes.message);
           metricsData.value = null;
           showMetrics.value = false;
         }
         
         ElMessage.success(`${selectedProvince.value} 预测完成！`);
         
-        // 更新图表
         nextTick(() => {
           renderChart();
         });
@@ -600,97 +682,108 @@ export default {
         predicting.value = false;
       }
     }
-
-    const handleFileUpload = (file) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        try {
-          const content = e.target.result
-          // 简单解析CSV文件（实际项目中可能需要更复杂的解析逻辑）
-          const lines = content.split('\n')
-          const headers = lines[0].split(',')
-          
-          // 检查列名
-          if (!headers.includes('年份') && !headers.includes('year') || 
-              !headers.includes('GDP') && !headers.includes('gdp')) {
-            ElMessage.error('文件格式错误：必须包含年份和GDP两列')
-            return
-          }
-          
-          const yearIndex = headers.includes('年份') ? headers.indexOf('年份') : headers.indexOf('year')
-          const gdpIndex = headers.includes('GDP') ? headers.indexOf('GDP') : headers.indexOf('gdp')
-          
-          const data = []
-          for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim() === '') continue
-            
-            const values = lines[i].split(',')
-            if (values.length >= 2) {
-              data.push({
-                year: parseInt(values[yearIndex]),
-                gdp: parseFloat(values[gdpIndex])
-              })
-            }
-          }
-          
-          customData.value = data
-          historicalData.value = data
-          ElMessage.success('数据文件上传成功')
-        } catch (error) {
-          ElMessage.error('文件解析失败：' + error.message)
-        }
-      }
-      reader.readAsText(file.raw)
-    }
-
-    // 修改自定义数据预测，调用后端API并传递省份信息
-    const runCustomPrediction = async () => {
-      if (!customData.value.length) {
-        ElMessage.warning('请先上传数据文件')
+    
+    // *** 新增：多文件上传处理逻辑 ***
+    const handleFileChange = (file, fileKey) => {
+      // 检查文件类型
+      if (file.raw.type !== 'text/csv' && !file.raw.name.toLowerCase().endsWith('.csv')) {
+        ElMessage.error('请上传CSV格式的文件')
+        customFiles.value[fileKey] = null
         return
       }
+      
+      customFiles.value[fileKey] = file.raw // 存储原始文件对象
+      
+      // 更新历史数据为仅预测结果，因为没有解析CSV文件内容
+      historicalData.value = []
+      predictionData.value = []
+      showMetrics.value = false
+      metricsData.value = null
 
-      if (!selectedProvinceForCustom.value) {
-        ElMessage.warning('请先选择省份以使用对应预测模型')
+      // 可以添加一个更友好的提示来显示哪些文件已就绪
+      const readyCount = Object.values(customFiles.value).filter(f => f !== null).length
+      if (readyCount === 4) {
+        ElMessage.success(`4个文件已全部选择，可以执行预测。`)
+      } else {
+        ElMessage.info(`已选择 ${readyCount}/4 个文件。`)
+      }
+    }
+    // ******************************
+
+
+    // *** 修改：自定义数据预测逻辑 - 使用 FormData ***
+    const runCustomPrediction = async () => {
+      if (!isCustomFilesValid.value) {
+        ElMessage.warning('请确保已选择模型省份并上传了所有4个CSV文件')
         return
       }
 
       predicting.value = true
       try {
-        // 将自定义数据和选择的省份发送到后端进行预测
-        const response = await fetch('/api/gdp/predict/custom', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            province: selectedProvinceForCustom.value,
-            data: customData.value
-          })
-        })
+        // 1. 创建 FormData 对象
+        const formData = new FormData()
+        formData.append('province', selectedProvinceForCustom.value)
         
-        const result = await response.json()
+        // 2. 附加所有文件，键名必须与后端 request.files[key] 匹配
+        for (const key in customFiles.value) {
+          if (customFiles.value[key]) {
+            formData.append(key, customFiles.value[key]) 
+          }
+        }
         
-        // 适配不同的API响应格式
-        if ((result.code === 0 || result.success) && result.data) {
+        // 3. 调用 API 函数
+        const response = await getGDPPredictionCustom(formData)
+        const result = response.data
+        
+        if (result.success && result.data) {
+          // 自定义预测后，我们只获取到预测结果，历史数据由后端处理
           predictionData.value = result.data
+          historicalData.value = [] // 保持为空，图表将只显示预测
+          
           ElMessage.success(`使用 ${selectedProvinceForCustom.value} 模型预测完成`)
           
-          // 更新图表
-          nextTick(() => {
+          // 尝试加载模型指标
+          try {
+            const metricsRes = await getGDPMetrics(selectedProvinceForCustom.value);
+            const metricsDataRes = metricsRes.data;
+            if (metricsDataRes.success && metricsDataRes.metrics) {
+              metricsData.value = metricsDataRes.metrics;
+              showMetrics.value = true;
+            } else {
+              metricsData.value = null;
+              showMetrics.value = false;
+            }
+          } catch (e) {
+            console.warn('加载模型指标失败:', e);
+            metricsData.value = null;
+            showMetrics.value = false;
+          }
+          
+          // 延迟确保DOM更新完成
+          setTimeout(() => {
             renderChart()
-          })
+          }, 500)
+          
         } else {
-          ElMessage.error('预测失败：' + (result.message || '未知错误'))
+          throw new Error(result.message || '预测失败')
         }
       } catch (error) {
-        ElMessage.error('预测异常：' + error.message)
+        console.error('自定义预测错误:', error)
+        // 尝试解析后端返回的详细错误信息
+        const errorMessage = error.response?.data?.message || error.message;
+        ElMessage.error('预测异常：' + errorMessage)
       } finally {
         predicting.value = false
       }
     }
+    // ******************************
+
 
     const formatNumber = (num) => {
+      // 保持不变
+      if (typeof num !== 'number' || !isFinite(num)) {
+          return 'N/A'; 
+      }
       return new Intl.NumberFormat('zh-CN', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
@@ -698,6 +791,7 @@ export default {
     }
 
     const renderChart = () => {
+      // 保持不变，但要注意 historicalData 可能是空的
       if (!hasData.value) return
       
       const chartDom = document.getElementById('gdp-chart')
@@ -709,12 +803,15 @@ export default {
       
       chart = echarts.init(chartDom)
       
-      // 准备图表数据
       const historicalYears = historicalData.value.map(d => d.year)
-      const historicalGDP = historicalData.value.map(d => d.gdp)
+      const historicalGDP = historicalData.value.map(d => d.gdp).filter(g => g !== undefined) 
       
       const predictionYears = predictionData.value.map(d => d.year)
       const predictionGDP = predictionData.value.map(d => d.gdp)
+      
+      if (historicalYears.length !== historicalData.value.length) {
+          return;
+      }
       
       const option = {
         tooltip: {
@@ -728,17 +825,19 @@ export default {
           }
         },
         legend: {
-          data: ['历史GDP', '预测GDP']
+          data: ['历史GDP', '预测GDP'],
+          bottom: 0, 
+          left: 'center'
         },
         grid: {
           left: '3%',
           right: '4%',
-          bottom: '3%',
+          bottom: '10%',
           containLabel: true
         },
         xAxis: {
           type: 'category',
-          boundaryGap: false,
+          boundaryGap: true,
           data: [...historicalYears, ...predictionYears]
         },
         yAxis: {
@@ -787,20 +886,18 @@ export default {
       
       chart.setOption(option)
       
-      // 响应窗口大小变化
       window.addEventListener('resize', function() {
         chart.resize()
       })
     }
 
     const toggleChartType = () => {
+      // 保持不变
       chartType.value = chartType.value === 'line' ? 'bar' : 'line'
       renderChart()
     }
 
     onMounted(() => {
-      console.log('GDP预测组件已挂载')
-      // 组件挂载时加载省份列表
       loadProvinces()
     })
 
@@ -819,7 +916,9 @@ export default {
       predicting,
       historicalData,
       predictionData,
-      customData,
+      // *** 导出 customFiles ***
+      customFiles,
+      // **********************
       chartType,
       provinces,
       hasData,
@@ -828,19 +927,26 @@ export default {
       handleProvinceChange,
       loadData,
       runPrediction,
-      handleFileUpload,
+      // *** 导出新的 handleFileChange ***
+      handleFileChange,
+      // *******************************
       runCustomPrediction,
       formatNumber,
       toggleChartType,
       metricsData,
       showMetrics,
-      formatMetricsForTable
+      formatMetricsForTable,
+      // *** 导出新的自定义属性 ***
+      isCustomFilesValid,
+      dataFormatDescription
+      // ***************************
     }
   }
 }
 </script>
 
 <style scoped>
+/* ... (样式保持不变，但新增了文件上传网格样式) ... */
 .gdp-prediction-container {
   padding: 20px;
   max-width: 1400px;
@@ -967,16 +1073,51 @@ export default {
   border-bottom: 1px solid #ebeef5;
 }
 
-:deep(.el-upload) {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+/* 调整多文件上传样式 */
+.file-upload-grid {
+  margin-top: 15px;
 }
 
-:deep(.el-upload__tip) {
-  margin-top: 10px;
+.file-upload-grid .el-col {
+  margin-bottom: 20px;
+}
+
+.file-upload-grid label {
+  display: block;
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.upload-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upload-box .el-upload__tip {
+  margin: 0;
+  margin-left: 10px;
   font-size: 12px;
   color: #909399;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-name-tag {
+  font-size: 12px;
+  color: #67C23A;
+  white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mt-20 {
+  margin-top: 20px;
 }
 
 /* 主容器滚动条样式 */
